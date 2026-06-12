@@ -1,8 +1,4 @@
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-// ✅ Updated to Cloudflare Tunnel URL — supports HTTPS (no CORS issues)
-window.ZOHO = window.ZOHO || {};
-window.ZOHO.embeddedApp = window.ZOHO.embeddedApp || { on: function(){}, init: function(){} };
-window.ZOHO.CRM = window.ZOHO.CRM || { API: {} };
 const SMS_API_URL = "https://surgery-stick-assistance-what.trycloudflare.com/send_sms";
 
 const TEMPLATES = [
@@ -29,31 +25,57 @@ let campaignId = null;
 let allLeads   = [];
 let selectedLead = null;
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-ZOHO.embeddedApp.on("PageLoad", function(data) {
-  console.log("[SMS Widget] PageLoad:", JSON.stringify(data));
+// ─── SAFE INIT — wait for SDK to be ready ─────────────────────────────────────
+function startApp() {
+  ZOHO.embeddedApp.on("PageLoad", function(data) {
+    console.log("[SMS Widget] PageLoad:", JSON.stringify(data));
 
-  campaignId = data.EntityId || data.entityId || null;
-  const campName = data.Name || data.name || ("Campaign ID: " + campaignId) || "Campaign";
-  document.getElementById("campaignName").textContent = campName;
+    campaignId = data.EntityId || data.entityId || null;
+    const campName = data.Name || data.name || ("Campaign ID: " + campaignId) || "Campaign";
+    document.getElementById("campaignName").textContent = campName;
 
-  populateTemplates();
+    populateTemplates();
 
-  if (campaignId) {
-    fetchLeads(campaignId);
-  } else {
-    const urlParams = new URLSearchParams(window.location.search);
-    const idFromUrl = urlParams.get("EntityId") || urlParams.get("recordId");
-    if (idFromUrl) {
-      campaignId = idFromUrl;
+    if (campaignId) {
       fetchLeads(campaignId);
     } else {
-      showNoLeads("Campaign ID detect nahi hua. Widget ko Campaign record se open karein.");
+      const urlParams = new URLSearchParams(window.location.search);
+      const idFromUrl = urlParams.get("EntityId") || urlParams.get("recordId");
+      if (idFromUrl) {
+        campaignId = idFromUrl;
+        fetchLeads(campaignId);
+      } else {
+        showNoLeads("Campaign ID detect nahi hua. Widget ko Campaign record se open karein.");
+      }
     }
-  }
-});
+  });
 
-ZOHO.embeddedApp.init();
+  ZOHO.embeddedApp.init();
+}
+
+// Wait for ZOHO SDK to load
+if (typeof ZOHO !== "undefined") {
+  startApp();
+} else {
+  window.addEventListener("load", function() {
+    if (typeof ZOHO !== "undefined") {
+      startApp();
+    } else {
+      // SDK still not loaded — retry
+      var attempts = 0;
+      var interval = setInterval(function() {
+        attempts++;
+        if (typeof ZOHO !== "undefined") {
+          clearInterval(interval);
+          startApp();
+        } else if (attempts > 20) {
+          clearInterval(interval);
+          showNoLeads("Zoho SDK load nahi hua. CRM ke andar widget open karein.");
+        }
+      }, 500);
+    }
+  });
+}
 
 // ─── FETCH LEADS ──────────────────────────────────────────────────────────────
 function fetchLeads(campId) {
@@ -186,6 +208,9 @@ function goBack() {
 // ─── TEMPLATES ────────────────────────────────────────────────────────────────
 function populateTemplates() {
   const select = document.getElementById("templateSelect");
+  // Clear existing options except first
+  while (select.options.length > 1) select.remove(1);
+  
   TEMPLATES.forEach(function(t) {
     const opt = document.createElement("option");
     opt.value = t.id;
@@ -237,20 +262,13 @@ async function sendSMS() {
   if (!sender || sender.length !== 6) { showError("Sender ID must be exactly 6 characters."); return; }
   if (!peid)       { showError("PEID required."); return; }
   if (!templateId) { showError("Template ID required."); return; }
-  if (!message)    { showError("Message cannot be empty."); return; }
+  if (!message)    { showError("Message empty nahi hona chahiye."); return; }
 
   setBtnLoading(true);
 
   try {
-    const payload = {
-      mobile:      mobile,
-      sender:      sender,
-      message:     message,
-      peid:        peid,
-      template_id: templateId
-    };
-
-    console.log("[SMS Widget] Sending payload:", JSON.stringify(payload));
+    const payload = { mobile, sender, message, peid, template_id: templateId };
+    console.log("[SMS Widget] Sending:", JSON.stringify(payload));
 
     const response = await fetch(SMS_API_URL, {
       method: "POST",
@@ -259,44 +277,31 @@ async function sendSMS() {
     });
 
     const result = await response.json();
-    console.log("[SMS Widget] API response:", JSON.stringify(result));
+    console.log("[SMS Widget] Response:", JSON.stringify(result));
 
     if (response.ok) {
-      // ✅ Extract MSG ID from any possible key the API returns
       const msgId =
-        result.msg_id        ||
-        result.message_id    ||
-        result.msgId         ||
-        result.id            ||
-        result.MSG_ID        ||
+        result.msg_id || result.message_id || result.msgId || result.id ||
         Object.values(result).find(function(v) {
-          return typeof v === "string" && (v.startsWith("MSG") || v.length > 8);
+          return typeof v === "string" && v.length > 4;
         }) || "N/A";
 
       showResult(msgId);
 
-      // ✅ Save note in Zoho CRM on the Lead record
       if (selectedLead && selectedLead.id) {
         ZOHO.CRM.API.addNote({
           Entity: "Leads",
           RecordID: selectedLead.id,
           Note_Title: "SMS Sent via Campaign",
-          Note_Content:
-            "📱 Mobile: " + mobile +
-            "\n🆔 Msg ID: " + msgId +
-            "\n📝 Message: " + message +
-            "\n🏷 Sender: " + sender +
-            "\n📋 Template ID: " + templateId
-        }).catch(function(e) { console.warn("Note add error:", e); });
+          Note_Content: "📱 Mobile: " + mobile + "\n🆔 Msg ID: " + msgId + "\n📝 Message: " + message
+        }).catch(function(e) { console.warn("Note error:", e); });
       }
-
     } else {
       showError(result.error || result.message || "API error: HTTP " + response.status);
     }
-
   } catch(err) {
-    console.error("[SMS Widget] Fetch error:", err);
-    showError("Network error — could not reach SMS server. Check if API is running.");
+    console.error("[SMS Widget] Error:", err);
+    showError("Network error — SMS server tak nahi pahuncha.");
   } finally {
     setBtnLoading(false);
   }
