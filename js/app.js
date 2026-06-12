@@ -1,5 +1,8 @@
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 // ✅ Updated to Cloudflare Tunnel URL — supports HTTPS (no CORS issues)
+window.ZOHO = window.ZOHO || {};
+window.ZOHO.embeddedApp = window.ZOHO.embeddedApp || { on: function(){}, init: function(){} };
+window.ZOHO.CRM = window.ZOHO.CRM || { API: {} };
 const SMS_API_URL = "https://surgery-stick-assistance-what.trycloudflare.com/send_sms";
 
 const TEMPLATES = [
