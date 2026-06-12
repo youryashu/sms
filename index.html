@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Send SMS</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="widget-wrap">
+
+  <!-- STEP 1: Select Lead -->
+  <div id="step1" class="step active">
+    <div class="header">
+      <div class="header-icon">👥</div>
+      <div>
+        <h2>Send SMS via Campaign</h2>
+        <p id="campaignName">Loading campaign...</p>
+      </div>
+    </div>
+
+    <div class="section-label">Select a Lead to send SMS</div>
+
+    <div class="search-wrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍  Search by name or mobile..." oninput="filterLeads()"/>
+    </div>
+
+    <div id="leadsContainer" class="leads-list">
+      <div class="loading-state">
+        <div class="spinner-blue"></div>
+        <span>Fetching campaign leads...</span>
+      </div>
+    </div>
+
+    <div id="noLeads" class="empty-state hidden">
+      <div class="empty-icon">📭</div>
+      <p>No leads found in this campaign.</p>
+    </div>
+  </div>
+
+  <!-- STEP 2: Compose & Send SMS -->
+  <div id="step2" class="step hidden">
+    <div class="header">
+      <button class="back-btn" onclick="goBack()">← Back</button>
+      <div class="header-icon">✉</div>
+      <div>
+        <h2>Send SMS</h2>
+        <p id="selectedLeadName">—</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field-label">Mobile Number</div>
+      <div class="input-row">
+        <input type="text" id="mobileInput" class="input-field" placeholder="10-digit mobile"/>
+        <span class="badge" id="mobileBadge">Auto</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field-label">Choose Template</div>
+      <select id="templateSelect" class="input-field select-field" onchange="onTemplateChange()">
+        <option value="">-- Select Template --</option>
+      </select>
+      <div id="templatePreview" class="template-preview hidden"></div>
+
+      <div class="field-label mt">Sender ID</div>
+      <input type="text" id="senderInput" class="input-field" placeholder="6-char Sender ID" maxlength="6"/>
+
+      <div class="field-label mt">Principal Entity ID (PEID)</div>
+      <input type="text" id="peidInput" class="input-field" placeholder="PEID from DLT"/>
+
+      <div class="field-label mt">Template ID</div>
+      <input type="text" id="templateIdInput" class="input-field" placeholder="DLT Template ID"/>
+    </div>
+
+    <div class="card">
+      <div class="field-label">Message</div>
+      <textarea id="messageArea" class="textarea-field" rows="4" oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="charCount">0</span> chars</div>
+    </div>
+
+    <button class="send-btn" id="sendBtn" onclick="sendSMS()">
+      <span id="sendBtnText">Send SMS</span>
+      <span id="sendBtnSpinner" class="spinner hidden"></span>
+    </button>
+
+    <div id="resultBox" class="result-box hidden">
+      <div class="result-icon">✓</div>
+      <div class="result-body">
+        <div class="result-title">SMS Dispatched!</div>
+        <div class="result-label">Message ID</div>
+        <div class="msg-id-box">
+          <span id="msgIdValue">—</span>
+          <button class="copy-btn" onclick="copyMsgId()">Copy</button>
+        </div>
+        <button class="send-another-btn" onclick="sendAnother()">Send to Another Lead</button>
+      </div>
+    </div>
+
+    <div id="errorBox" class="error-box hidden">
+      <span class="error-icon">✕</span>
+      <span id="errorMsg">Error occurred.</span>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://live.zwidgets.com/js-sdk/1.0.5/ZohoEmbeddedAppSDK.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

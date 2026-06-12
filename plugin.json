@@ -1,0 +1,16 @@
+{
+  "plugin_name": "Send-SMS-Widget",
+  "version": "1.0",
+  "schema_version": "1.0",
+  "homepage_url": "index.html",
+  "author_name": "Yashika Nagpal",
+  "extensions": [
+    {
+      "name": "Send-SMS-Widget",
+      "type": "related_list",
+      "entity_name": "Campaigns",
+      "location": "related_list",
+      "url": "index.html"
+    }
+  ]
+}
